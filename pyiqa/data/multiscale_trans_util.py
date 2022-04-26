@@ -12,13 +12,17 @@ from os import path as osp
 
 import torch
 from torch.nn import functional as F
-
+import pdb
 
 def extract_image_patches(x, kernel, stride=1, dilation=1):
     """
     Ref: https://stackoverflow.com/a/65886666
     """
     # Do TF 'SAME' Padding
+
+    # kernel = 32
+    # stride = 32
+    # dilation = 1
     b, c, h, w = x.shape
     h2 = math.ceil(h / stride)
     w2 = math.ceil(w / stride)
@@ -28,6 +32,8 @@ def extract_image_patches(x, kernel, stride=1, dilation=1):
 
     # Extract patches
     patches = F.unfold(x, kernel, dilation, stride=stride)
+    # patches.size() -- [1, 3072, 42]
+
     return patches
 
 
@@ -50,6 +56,8 @@ def resize_preserve_aspect_ratio(image, h, w, longer_side_length):
     ratio = longer_side_length / max(h, w)
     rh = round(h * ratio)
     rw = round(w * ratio)
+    # image.size() -- [1, 3, 384, 512]
+    # (Pdb) rh, rw -- (168, 224)
 
     resized = F.interpolate(image, (rh, rw), mode='bicubic')
     return resized, rh, rw
@@ -70,6 +78,7 @@ def _pad_or_cut_to_max_seq_len(x, max_seq_len):
     paddings = torch.zeros((n_crops, c, max_seq_len)).to(x)
     x = torch.cat([x, paddings], dim=-1)
     x = x[:, :, :max_seq_len]
+    # max_seq_len -- 49
     return x
 
 
@@ -98,6 +107,8 @@ def get_hashed_spatial_pos_emb_index(grid_size, count_h, count_w):
     pos_emb_hash = pos_emb_hash_h * grid_size + pos_emb_hash_w
 
     pos_emb_hash = pos_emb_hash.reshape(1, -1)
+    # pos_emb_hash.size() -- [1, 42]
+
     return pos_emb_hash
 
 
@@ -121,8 +132,8 @@ def _extract_patches_and_positions_from_image(image, patch_size, patch_stride, h
       A concatenating vector of (patches, HSE, SCE, input mask). The tensor shape
       is (n_crops, num_patches, patch_size * patch_size * c + 3).
     """
-    n_crops, c, h, w = image.shape
-    p = extract_image_patches(image, patch_size, patch_stride)
+    n_crops, c, h, w = image.shape # [1, 3, 168, 224]
+    p = extract_image_patches(image, patch_size, patch_stride) # patch_size, patch_stride -- (32, 32)
     assert p.shape[1] == c * patch_size**2
 
     count_h = _ceil_divide_int(h, patch_stride)
@@ -139,8 +150,16 @@ def _extract_patches_and_positions_from_image(image, patch_size, patch_stride, h
     # mask to the model.
     # Shape (n_crops, c * patch_size * patch_size + 3, num_patches)
     out = torch.cat([p, spatial_p.to(p), scale_p.to(p), mask_p.to(p)], dim=1)
+    # pp p.size(), spatial_p.size(), scale_p.size(), mask_p.size()
+    # [1, 3072, 42],
+    # [1, 1, 42],
+    # [1, 1, 42],
+    # [1, 1, 42]
+
+    # max_seq_len -- 49
     if max_seq_len >= 0:
         out = _pad_or_cut_to_max_seq_len(out, max_seq_len)
+
     return out
 
 
@@ -166,12 +185,12 @@ def get_multiscale_patches(image,
       is (n_crops, num_patches, patch_size * patch_size * c + 3).
     """
     # Sorting the list to ensure a deterministic encoding of the scale position.
-    longer_side_lengths = sorted(longer_side_lengths)
 
-    if len(image.shape) == 3:
+    longer_side_lengths = sorted(longer_side_lengths) # [224, 384]
+    if len(image.shape) == 3: # len(image.shape) -- 4
         image = image.unsqueeze(0)
 
-    n_crops, c, h, w = image.shape
+    n_crops, c, h, w = image.shape #  image.size() -- [1, 3, 384, 512]
 
     outputs = []
     for scale_id, longer_size in enumerate(longer_side_lengths):
@@ -182,10 +201,14 @@ def get_multiscale_patches(image,
                                                         rh, rw, c, scale_id, max_seq_len)
         outputs.append(out)
 
+    # max_seq_len_from_original_res -- -1
     if max_seq_len_from_original_res is not None:
         out = _extract_patches_and_positions_from_image(image, patch_size, patch_stride, hse_grid_size, n_crops, h, w,
                                                         c, len(longer_side_lengths), max_seq_len_from_original_res)
         outputs.append(out)
 
-    outputs = torch.cat(outputs, dim=-1)
+    # len(outputs), outputs[0].size(), outputs[1].size(), outputs[2].size()
+    # (3, [1, 3075, 49], [1, 3075, 144], [1, 3075, 192])
+
+    outputs = torch.cat(outputs, dim=-1) # [1, 3075, 385]
     return outputs.transpose(1, 2)

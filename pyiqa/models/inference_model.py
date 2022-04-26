@@ -55,6 +55,8 @@ class InferenceModel():
         self.trans = tv.transforms.Compose(tf_list)
 
     def test(self, x, y=None):
+        # (Pdb) x.size() -- [1, 3, 384, 512]
+        # (Pdb) pp y -- None
         if not torch.is_tensor(x):
             x = self.trans(x)
             x = x.unsqueeze(0).to(self.device)
@@ -62,10 +64,9 @@ class InferenceModel():
                 assert y is not None, 'Please specify reference image for Full Reference metric'
                 y = self.trans(y)
                 y = y.unsqueeze(0).to(self.device)
-        pdb.set_trace()
         with torch.no_grad():
             if self.metric_mode == 'FR':
                 output = self.net(x, y)
-            elif self.metric_mode == 'NR':
+            elif self.metric_mode == 'NR': # True
                 output = self.net(x)
         return output.cpu().item()

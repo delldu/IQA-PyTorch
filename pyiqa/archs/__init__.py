@@ -32,7 +32,6 @@ def create_metric(metric_name, eval=True, **opt):
     network_type = net_opts.pop('type')
     net = ARCH_REGISTRY.get(network_type)(**net_opts)
     net.lower_better = DEFAULT_CONFIGS[metric_name].get('lower_better', False)
-    pdb.set_trace()
     
     if eval:
         net.eval()

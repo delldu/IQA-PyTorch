@@ -316,7 +316,7 @@ class MUSIQ(nn.Module):
         # pretrained = 'ava'
         # pretrained_model_path = None
         # longer_side_lengths = [224, 384]
-        # max_seq_len_from_original_res = -1
+        max_seq_len_from_original_res = -1
 
 
         resnet_token_dim = 64
@@ -332,10 +332,6 @@ class MUSIQ(nn.Module):
 
         # set num_class to 10 if pretrained model used AVA dataset
         # if not specified pretrained dataset, use AVA for default
-        # pp pretrained_model_path -- None
-        # pretrained_model_path = '/tmp/musiq_ava_ckpt-e8d3f067.pth'
-        # pretrained = True
-
         if pretrained_model_path is None and pretrained:
             url_key = 'ava' if isinstance(pretrained, bool) else pretrained
             num_class = 10 if url_key == 'ava' else num_class
@@ -357,6 +353,7 @@ class MUSIQ(nn.Module):
                                                       num_heads, num_layers, num_scales, spatial_pos_grid_size,
                                                       use_scale_emb, use_sinusoid_pos_emb)
 
+        # num_class -- 1
         if num_class > 1:
             self.head = nn.Sequential(
                 nn.Linear(hidden_size, num_class),
@@ -365,17 +362,27 @@ class MUSIQ(nn.Module):
         else:
             self.head = nn.Linear(hidden_size, num_class)
 
-        if pretrained_model_path is not None:
+        if pretrained_model_path is not None: # False
             load_pretrained_network(self, pretrained_model_path, True)
 
 
     def forward(self, x, return_mos=True, return_dist=False):
-        if not self.training:
+        # x.size() -- [1, 3, 384, 512], range: [0.0, 1.0]
+        # return_mos = True
+        # return_dist = False
+
+        if not self.training: # True
             # normalize inputs to [-1, 1] as the official code
             x = (x - 0.5) * 2
+            # self.data_preprocess_opts
+            # {'patch_size': 32, 'patch_stride': 32, 
+            # 'hse_grid_size': 10, 
+            # 'longer_side_lengths': [224, 384], 'max_seq_len_from_original_res': -1}
+
             x = get_multiscale_patches(x, **self.data_preprocess_opts)
 
         assert len(x.shape) in [3, 4]
+        # x.shape -- [1, 386, 384]
         if len(x.shape) == 4:
             b, num_crops, seq_len, dim = x.shape
             x = x.reshape(b * num_crops, seq_len, dim)
@@ -405,11 +412,12 @@ class MUSIQ(nn.Module):
         mos = dist_to_mos(q)
 
         return_list = []
-        if return_mos:
+        if return_mos: # True
             return_list.append(mos)
-        if return_dist:
+        if return_dist: # False
             return_list.append(q)
 
+        #  len(return_list) -- 1
         if len(return_list) > 1:
             return return_list
         else:
