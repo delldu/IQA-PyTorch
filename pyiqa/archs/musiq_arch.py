@@ -15,6 +15,8 @@ from .arch_util import ExactPadding2d, excact_padding_2d
 from pyiqa.utils.registry import ARCH_REGISTRY
 from pyiqa.data.multiscale_trans_util import get_multiscale_patches
 
+import pdb
+
 default_model_urls = {
     'ava':
     'https://github.com/chaofengc/IQA-PyTorch/releases/download/v0.1-weights/musiq_ava_ckpt-e8d3f067.pth',
@@ -298,6 +300,25 @@ class MUSIQ(nn.Module):
     ):
         super(MUSIQ, self).__init__()
 
+        # self = MUSIQ()
+        # patch_size = 32
+        # num_class = 1
+        # hidden_size = 384
+        # mlp_dim = 1152
+        # attention_dropout_rate = 0.0
+        # dropout_rate = 0
+        # num_heads = 6
+        # num_layers = 14
+        # num_scales = 3
+        # spatial_pos_grid_size = 10
+        # use_scale_emb = True
+        # use_sinusoid_pos_emb = False
+        # pretrained = 'ava'
+        # pretrained_model_path = None
+        # longer_side_lengths = [224, 384]
+        # max_seq_len_from_original_res = -1
+
+
         resnet_token_dim = 64
         self.patch_size = patch_size
 
@@ -311,6 +332,10 @@ class MUSIQ(nn.Module):
 
         # set num_class to 10 if pretrained model used AVA dataset
         # if not specified pretrained dataset, use AVA for default
+        # pp pretrained_model_path -- None
+        # pretrained_model_path = '/tmp/musiq_ava_ckpt-e8d3f067.pth'
+        # pretrained = True
+
         if pretrained_model_path is None and pretrained:
             url_key = 'ava' if isinstance(pretrained, bool) else pretrained
             num_class = 10 if url_key == 'ava' else num_class
@@ -342,6 +367,7 @@ class MUSIQ(nn.Module):
 
         if pretrained_model_path is not None:
             load_pretrained_network(self, pretrained_model_path, True)
+
 
     def forward(self, x, return_mos=True, return_dist=False):
         if not self.training:

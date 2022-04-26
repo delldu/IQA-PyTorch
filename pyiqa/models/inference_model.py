@@ -3,7 +3,7 @@ import torchvision as tv
 
 from pyiqa.archs import create_metric
 from pyiqa.default_model_configs import DEFAULT_CONFIGS
-
+import pdb
 
 class InferenceModel():
     """Common model for quality inference of single image with default setting of each metric."""
@@ -23,12 +23,17 @@ class InferenceModel():
 
         self.metric_name = metric_name
         metric_default_cfg = DEFAULT_CONFIGS[metric_name]
-        if metric_name in DEFAULT_CONFIGS.keys():
+        # metric_default_cfg
+        # {'metric_opts': {'type': 'MUSIQ', 'pretrained': 'ava'}, 'metric_mode': 'NR'}
+
+        # metric_name -- 'musiq-ava'
+        if metric_name in DEFAULT_CONFIGS.keys(): # True
             self.metric_mode = metric_default_cfg['metric_mode']
         else:
             self.metric_mode = metric_mode
 
         # load pretrained models
+        # pp model_path -- None
         if model_path is not None:
             kwargs['pretrained_model_path'] = model_path
 
@@ -39,10 +44,12 @@ class InferenceModel():
         self.net.eval()
 
         tf_list = []
+        # pp input_size -- None
         if input_size is not None:
             tf_list.append(tv.transforms.Resize(input_size))
         tf_list.append(tv.transforms.ToTensor())
         tf_list.append(tv.transforms.Lambda(lambda x: x * img_range))
+        # pp mean, std -- (None, None)
         if mean is not None and std is not None:
             tf_list.append(tv.transforms.Normalize(mean, std))
         self.trans = tv.transforms.Compose(tf_list)
@@ -55,6 +62,7 @@ class InferenceModel():
                 assert y is not None, 'Please specify reference image for Full Reference metric'
                 y = self.trans(y)
                 y = y.unsqueeze(0).to(self.device)
+        pdb.set_trace()
         with torch.no_grad():
             if self.metric_mode == 'FR':
                 output = self.net(x, y)

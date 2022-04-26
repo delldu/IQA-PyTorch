@@ -3,7 +3,7 @@ import glob
 import os
 from PIL import Image
 from pyiqa.models.inference_model import InferenceModel
-
+import pdb
 
 def main():
     """Inference demo for pyiqa.

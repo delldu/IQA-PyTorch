@@ -8,6 +8,8 @@ from pyiqa.utils.registry import ARCH_REGISTRY
 
 from pyiqa.default_model_configs import DEFAULT_CONFIGS
 
+import pdb
+
 __all__ = ['build_network', 'create_metric']
 
 # automatically scan and import arch modules for registry
@@ -30,6 +32,8 @@ def create_metric(metric_name, eval=True, **opt):
     network_type = net_opts.pop('type')
     net = ARCH_REGISTRY.get(network_type)(**net_opts)
     net.lower_better = DEFAULT_CONFIGS[metric_name].get('lower_better', False)
+    pdb.set_trace()
+    
     if eval:
         net.eval()
     logger = get_root_logger()
